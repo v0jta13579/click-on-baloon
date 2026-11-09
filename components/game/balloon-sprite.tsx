@@ -1,12 +1,16 @@
 "use client"
 
 import { memo } from "react"
-import { SPECIALS, COLORS, type SpecialId } from "@/lib/game/levels"
+import { SPECIALS, COLORS, baseColor, isStar, type SpecialId } from "@/lib/game/levels"
 import type { Balloon } from "@/lib/game/state"
 import { BalloonArt } from "./balloon-art"
 
 function describe(kind: Balloon["kind"]) {
   if (kind === "bomb") return "Bomba, nemačkat, ztratíš život"
+  if (isStar(kind)) {
+    const color = COLORS.find((c) => c.id === baseColor(kind))
+    return `Rychlý hvězdný balónek, ${color?.nom ?? ""}, když uletí, ztratíš život`
+  }
   if (kind in SPECIALS) return `${SPECIALS[kind as SpecialId].name} balónek`
   const color = COLORS.find((c) => c.id === kind)
   return `Balónek, ${color?.nom ?? ""}`

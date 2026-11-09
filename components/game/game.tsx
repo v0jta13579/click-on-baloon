@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 import { Sparkles, Trophy } from "lucide-react"
-import { getDifficulty, type BalloonKind } from "@/lib/game/levels"
+import { STAR_SPEED, getDifficulty, isStar, type BalloonKind } from "@/lib/game/levels"
 import { updateSave, useSave } from "@/lib/game/save"
 import {
   createState,
@@ -85,7 +85,7 @@ export function Game() {
         kind,
         x: 7 + Math.random() * 86,
         size: def.balloonSize,
-        duration: def.riseSeconds * (0.85 + Math.random() * 0.3),
+        duration: def.riseSeconds * (0.85 + Math.random() * 0.3) * (isStar(kind) ? STAR_SPEED : 1),
         swayDuration: 2.2 + Math.random() * 1.8,
         swayDelay: Math.random() * 3,
       }
@@ -159,9 +159,6 @@ export function Game() {
           level={state.level}
           xp={state.xp}
           lives={state.lives}
-          score={state.score}
-          best={save.best}
-          streak={state.streak}
           doubleUntil={state.doubleUntil}
           progress={state.progress}
           done={state.done}
@@ -183,6 +180,7 @@ export function Game() {
           <StartOverlay
             mode={state.status}
             score={state.score}
+            streak={state.bestStreak}
             level={state.level}
             best={save.best}
             bestLevel={save.bestLevel}

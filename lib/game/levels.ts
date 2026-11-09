@@ -10,7 +10,8 @@ export const COLORS = [
 
 export type ColorId = (typeof COLORS)[number]["id"]
 export type SpecialId = "bronze" | "silver" | "gold"
-export type BalloonKind = ColorId | SpecialId | "bomb"
+export type StarId = `star-${ColorId}`
+export type BalloonKind = ColorId | SpecialId | StarId | "bomb"
 
 export type Palette = { light: string; base: string; dark: string }
 
@@ -57,10 +58,27 @@ export function isSpecial(kind: BalloonKind): kind is SpecialId {
   return kind in SPECIALS
 }
 
+/** Hvězdný balónek: šance na každý nový balónek, rychlost stoupání a odměna. */
+export const STAR_CHANCE = 1 / 20
+export const STAR_SPEED = 0.4
+export const STAR_REWARD = 5
+
+export function isStar(kind: BalloonKind): kind is StarId {
+  return kind.startsWith("star-")
+}
+
+/** Barva balónku; hvězdný balónek má barvu, ze které vznikl. Bomba a kovové balónky ji nemají. */
+export function baseColor(kind: BalloonKind): ColorId | null {
+  if (isStar(kind)) return kind.slice(5) as ColorId
+  if (kind === "bomb" || isSpecial(kind)) return null
+  return kind
+}
+
 export function paletteOf(kind: BalloonKind): Palette {
   if (kind === "bomb") return BOMB_PALETTE
   if (isSpecial(kind)) return SPECIALS[kind]
-  return COLORS.find((c) => c.id === kind) as Palette
+  const color = baseColor(kind)
+  return COLORS.find((c) => c.id === color) as Palette
 }
 
 export type Task =

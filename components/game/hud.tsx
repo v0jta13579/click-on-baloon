@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Flame, Heart, MousePointerClick, Trophy, Zap } from "lucide-react"
+import { Heart, Zap } from "lucide-react"
 import { MAX_LIVES } from "@/lib/game/levels"
 import { LevelMenu } from "./level-menu"
 
@@ -33,28 +33,6 @@ function DoubleBadge({ until }: { until: number }) {
   )
 }
 
-function Stat({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-2xl bg-white/90 px-3 py-2 shadow-lg">
-      {icon}
-      <div className="leading-tight">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          {label}
-        </div>
-        <div className="text-xl font-bold tabular-nums text-slate-800">{value}</div>
-      </div>
-    </div>
-  )
-}
-
 function Lives({ lives }: { lives: number }) {
   return (
     <div
@@ -79,9 +57,6 @@ type Props = {
   level: number
   xp: number
   lives: number
-  score: number
-  best: number
-  streak: number
   doubleUntil: number
   progress: Record<string, number>
   done: Record<string, boolean>
@@ -93,9 +68,6 @@ export function Hud({
   level,
   xp,
   lives,
-  score,
-  best,
-  streak,
   doubleUntil,
   progress,
   done,
@@ -113,21 +85,6 @@ export function Hud({
         onToggle={onToggleMenu}
       />
       <Lives lives={lives} />
-      <Stat
-        icon={<MousePointerClick className="size-6 text-sky-600" aria-hidden="true" />}
-        label="Kliky"
-        value={score}
-      />
-      <Stat
-        icon={<Trophy className="size-6 text-amber-500" aria-hidden="true" />}
-        label="Rekord"
-        value={best}
-      />
-      <Stat
-        icon={<Flame className="size-6 text-orange-500" aria-hidden="true" />}
-        label="Řetěz"
-        value={streak}
-      />
       <DoubleBadge until={doubleUntil} />
     </div>
   )

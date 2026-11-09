@@ -1,5 +1,5 @@
 import { useId } from "react"
-import { paletteOf, SPECIALS, type BalloonKind } from "@/lib/game/levels"
+import { isStar, paletteOf, SPECIALS, type BalloonKind } from "@/lib/game/levels"
 
 const STAR_POINTS =
   "50,35 54.7,48.5 69,48.8 57.6,57.5 61.8,71.2 50,63 38.2,71.2 42.4,57.5 31,48.8 45.3,48.5"
@@ -15,7 +15,8 @@ export function BalloonArt({
 }) {
   const gradientId = useId()
   const palette = paletteOf(kind)
-  const special = kind in SPECIALS
+  const star = isStar(kind)
+  const special = kind in SPECIALS || star
 
   if (kind === "bomb") {
     return (
@@ -94,7 +95,9 @@ export function BalloonArt({
           ? { filter: "drop-shadow(0 0 10px rgba(250, 204, 21, 0.95))" }
           : kind === "silver"
             ? { filter: "drop-shadow(0 0 7px rgba(226, 232, 240, 0.95))" }
-            : undefined
+            : star
+              ? { filter: `drop-shadow(0 0 7px ${palette.light})` }
+              : undefined
       }
     >
       <defs>

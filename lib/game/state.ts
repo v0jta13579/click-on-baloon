@@ -4,13 +4,18 @@ import {
   MAX_LEVEL,
   MAX_LIVES,
   SPECIALS,
+  STAR_CHANCE,
+  STAR_REWARD,
+  baseColor,
   getDifficulty,
   getTasks,
   isSpecial,
+  isStar,
   xpNeeded,
   type BalloonKind,
   type ColorId,
   type SpecialId,
+  type StarId,
   type Task,
 } from "./levels"
 
@@ -42,6 +47,7 @@ export type GameState = {
   score: number
   popped: number
   streak: number
+  bestStreak: number
   progress: Record<string, number>
   done: Record<string, boolean>
   balloons: Balloon[]
@@ -70,6 +76,7 @@ export function createState(status: GameState["status"] = "menu"): GameState {
     score: 0,
     popped: 0,
     streak: 0,
+    bestStreak: 0,
     progress: {},
     done: {},
     balloons: [],
@@ -129,7 +136,7 @@ function advanceTasks(
         next = current + 1
         break
       case "color":
-        if (kind === task.color) next = current + 1
+        if (baseColor(kind) === task.color) next = current + 1
         break
       case "bonus":
         if (isSpecial(kind)) next = current + 1
@@ -194,7 +201,11 @@ export function reducer(state: GameState, action: Action): GameState {
       }
 
       const multiplier = action.now < state.doubleUntil ? 2 : 1
-      const base = isSpecial(balloon.kind) ? SPECIALS[balloon.kind as SpecialId].points : 1
+      const base = isSpecial(balloon.kind)
+        ? SPECIALS[balloon.kind as SpecialId].points
+        : isStar(balloon.kind)
+          ? STAR_REWARD
+          : 1
       const gained = base * multiplier
 
       const streak = state.streak + 1
@@ -212,6 +223,7 @@ export function reducer(state: GameState, action: Action): GameState {
       let label = `+${gained}`
       if (balloon.kind === "silver") label += " · x2 na 30 s"
       if (balloon.kind === "gold") label += " ZLATÝ!"
+      if (isStar(balloon.kind)) label += " HVĚZDA!"
 
       return {
         ...state,
@@ -220,6 +232,7 @@ export function reducer(state: GameState, action: Action): GameState {
         score: state.score + gained,
         popped: state.popped + 1,
         streak,
+        bestStreak: Math.max(state.bestStreak, streak),
         progress: tasks.progress,
         done: tasks.done,
         doubleUntil:
@@ -270,11 +283,14 @@ export function pickBalloonKind(
     if (roll < threshold) return id
   }
 
-  const allowed = COLORS.map((c) => c.id as ColorId).filter((id) => id !== lastKind)
-  const wantedAllowed = wanted.filter((id) => id !== lastKind)
+  const lastColor = lastKind ? baseColor(lastKind) : null
+  const allowed = COLORS.map((c) => c.id as ColorId).filter((id) => id !== lastColor)
+  const wantedAllowed = wanted.filter((id) => id !== lastColor)
 
-  if (wantedAllowed.length > 0 && random() < 0.35) {
-    return wantedAllowed[Math.floor(random() * wantedAllowed.length)]
-  }
-  return allowed[Math.floor(random() * allowed.length)]
+  const color =
+    wantedAllowed.length > 0 && random() < 0.35
+      ? wantedAllowed[Math.floor(random() * wantedAllowed.length)]
+      : allowed[Math.floor(random() * allowed.length)]
+
+  return random() < STAR_CHANCE ? (`star-${color}` as StarId) : color
 }
