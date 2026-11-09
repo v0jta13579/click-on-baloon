@@ -10,7 +10,7 @@ export const COLORS = [
 
 export type ColorId = (typeof COLORS)[number]["id"]
 export type SpecialId = "bronze" | "silver" | "gold"
-export type BalloonKind = ColorId | SpecialId
+export type BalloonKind = ColorId | SpecialId | "bomb"
 
 export type Palette = { light: string; base: string; dark: string }
 
@@ -47,27 +47,43 @@ export const SPECIALS: Record<
   },
 }
 
+export const BOMB_PALETTE: Palette = { light: "#64748b", base: "#1e293b", dark: "#020617" }
+
 export const DOUBLE_POINTS_MS = 30_000
+export const MAX_LIVES = 3
+export const MAX_LEVEL = 30
+
+export function isSpecial(kind: BalloonKind): kind is SpecialId {
+  return kind in SPECIALS
+}
 
 export function paletteOf(kind: BalloonKind): Palette {
-  if (kind in SPECIALS) return SPECIALS[kind as SpecialId]
+  if (kind === "bomb") return BOMB_PALETTE
+  if (isSpecial(kind)) return SPECIALS[kind]
   return COLORS.find((c) => c.id === kind) as Palette
 }
 
 export type Task =
-  | { id: string; kind: "pop"; target: number; label: string }
-  | { id: string; kind: "streak"; target: number; label: string }
-  | { id: string; kind: "color"; color: ColorId; target: number; label: string }
+  | { id: string; kind: "pop"; target: number; reward: number; label: string }
+  | { id: string; kind: "streak"; target: number; reward: number; label: string }
+  | { id: string; kind: "bonus"; target: number; reward: number; label: string }
+  | { id: string; kind: "color"; color: ColorId; target: number; reward: number; label: string }
 
-export type LevelDef = {
-  level: number
-  tasks: Task[]
+export type Difficulty = {
   riseSeconds: number
   spawnMs: number
   balloonSize: number
+  bombChance: number
 }
 
-export const MAX_LEVEL = 20
+/** XP potřebné k přechodu z levelu `level` na `level + 1`. */
+export function xpNeeded(level: number): number {
+  return 150 + 75 * (level - 1)
+}
+
+function reward(level: number, factor: number): number {
+  return Math.round((xpNeeded(level) * factor) / 10) * 10
+}
 
 function balloonWord(count: number) {
   if (count === 1) return "balónek"
@@ -75,56 +91,71 @@ function balloonWord(count: number) {
   return "balónků"
 }
 
-export function getLevel(level: number): LevelDef {
+function colorTask(level: number, colorIndex: number, target: number): Task {
+  const color = COLORS[colorIndex % COLORS.length]
+  return {
+    id: `l${level}-color-${color.id}`,
+    kind: "color",
+    color: color.id,
+    target,
+    reward: reward(level, 0.8),
+    label: `Prasknout ${target} ${target <= 4 ? color.nom : color.gen} ${balloonWord(target)}`,
+  }
+}
+
+/** Úkoly, které vedou z levelu `level` na `level + 1`. */
+export function getTasks(level: number): Task[] {
+  if (level >= MAX_LEVEL) return []
   const n = level - 1
 
-  const popTarget = 10 + 6 * n
+  const popTarget = 30 + 12 * n
   const tasks: Task[] = [
     {
-      id: "pop",
+      id: `l${level}-pop`,
       kind: "pop",
       target: popTarget,
+      reward: reward(level, 2 / 3),
       label: `Prasknout ${popTarget} balónků`,
     },
+    colorTask(level, n, 8 + 2 * n),
   ]
 
-  const first = COLORS[n % COLORS.length]
-  const firstTarget = 2 + Math.ceil(level * 0.7)
+  const streakTarget = Math.min(60, 10 + 3 * n)
   tasks.push({
-    id: `color-${first.id}`,
-    kind: "color",
-    color: first.id,
-    target: firstTarget,
-    label: `Prasknout ${firstTarget} ${firstTarget <= 4 ? first.nom : first.gen} ${balloonWord(firstTarget)}`,
+    id: `l${level}-streak`,
+    kind: "streak",
+    target: streakTarget,
+    reward: reward(level, 1),
+    label: `${streakTarget} balónků za sebou bez chyby`,
   })
 
   if (level >= 3) {
-    const streak = 3 + level
+    const bonusTarget = level >= 12 ? 3 : level >= 7 ? 2 : 1
     tasks.push({
-      id: "streak",
-      kind: "streak",
-      target: streak,
-      label: `${streak} balónků za sebou bez chyby`,
+      id: `l${level}-bonus`,
+      kind: "bonus",
+      target: bonusTarget,
+      reward: reward(level, 1.2),
+      label:
+        bonusTarget === 1
+          ? "Prasknout bonusový balónek"
+          : `Prasknout ${bonusTarget} bonusové balónky`,
     })
   }
 
-  if (level >= 6) {
-    const second = COLORS[(n + 3) % COLORS.length]
-    const secondTarget = 2 + Math.ceil(level * 0.5)
-    tasks.push({
-      id: `color-${second.id}`,
-      kind: "color",
-      color: second.id,
-      target: secondTarget,
-      label: `Prasknout ${secondTarget} ${secondTarget <= 4 ? second.nom : second.gen} ${balloonWord(secondTarget)}`,
-    })
+  if (level >= 5) {
+    tasks.push(colorTask(level, n + 3, 6 + 2 * n))
   }
 
+  return tasks
+}
+
+export function getDifficulty(level: number): Difficulty {
+  const n = level - 1
   return {
-    level,
-    tasks,
-    riseSeconds: Math.max(4.5, 10.5 - 0.32 * n),
-    spawnMs: Math.max(380, Math.round(1150 - 40 * n)),
-    balloonSize: Math.max(58, Math.round(94 - 1.9 * n)),
+    riseSeconds: Math.max(4, 9.5 - 0.22 * n),
+    spawnMs: Math.max(330, Math.round(1250 - 32 * n)),
+    balloonSize: Math.max(54, Math.round(92 - 1.3 * n)),
+    bombChance: Math.min(0.22, 0.09 + 0.005 * n),
   }
 }

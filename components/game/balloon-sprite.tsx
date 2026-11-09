@@ -6,6 +6,7 @@ import type { Balloon } from "@/lib/game/state"
 import { BalloonArt } from "./balloon-art"
 
 function describe(kind: Balloon["kind"]) {
+  if (kind === "bomb") return "Bomba, nemačkat, ztratíš život"
   if (kind in SPECIALS) return `${SPECIALS[kind as SpecialId].name} balónek`
   const color = COLORS.find((c) => c.id === kind)
   return `Balónek, ${color?.nom ?? ""}`
@@ -38,7 +39,7 @@ function BalloonSpriteBase({ balloon, onPop, onEscape }: Props) {
       onAnimationEnd={(event) => {
         if (event.target === event.currentTarget) onEscape(balloon.id)
       }}
-      className="absolute cursor-pointer touch-none appearance-none border-0 bg-transparent p-0 outline-none focus-visible:ring-4 focus-visible:ring-white/90"
+      className="balloon-body absolute cursor-pointer touch-none appearance-none border-0 bg-transparent p-0 outline-none focus-visible:ring-4 focus-visible:ring-white/90"
       style={{
         left: `${balloon.x}%`,
         marginLeft: -balloon.size / 2,

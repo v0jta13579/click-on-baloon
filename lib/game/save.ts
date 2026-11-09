@@ -2,11 +2,11 @@
 
 import { useMemo, useSyncExternalStore } from "react"
 
-const STORAGE_KEY = "balonky-save-v1"
+const STORAGE_KEY = "balonky-save-v2"
 
-export type SaveData = { best: number; unlocked: number }
+export type SaveData = { best: number; bestLevel: number }
 
-const DEFAULT_SAVE: SaveData = { best: 0, unlocked: 1 }
+const DEFAULT_SAVE: SaveData = { best: 0, bestLevel: 1 }
 
 const listeners = new Set<() => void>()
 let memoryFallback = ""
@@ -25,7 +25,7 @@ function parse(raw: string): SaveData {
     const data = JSON.parse(raw) as Partial<SaveData>
     return {
       best: Number.isFinite(data.best) ? Math.max(0, Number(data.best)) : 0,
-      unlocked: Number.isFinite(data.unlocked) ? Math.max(1, Number(data.unlocked)) : 1,
+      bestLevel: Number.isFinite(data.bestLevel) ? Math.max(1, Number(data.bestLevel)) : 1,
     }
   } catch {
     return DEFAULT_SAVE

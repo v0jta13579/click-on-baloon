@@ -17,6 +17,71 @@ export function BalloonArt({
   const palette = paletteOf(kind)
   const special = kind in SPECIALS
 
+  if (kind === "bomb") {
+    return (
+      <svg
+        viewBox="0 0 100 142"
+        width={width}
+        height={width * 1.42}
+        aria-hidden="true"
+        className={className}
+        style={{ filter: "drop-shadow(0 0 8px rgba(239, 68, 68, 0.7))" }}
+      >
+        <defs>
+          <radialGradient id={gradientId} cx="35%" cy="30%" r="75%">
+            <stop offset="0" stopColor={palette.light} />
+            <stop offset="0.5" stopColor={palette.base} />
+            <stop offset="1" stopColor={palette.dark} />
+          </radialGradient>
+        </defs>
+        <path
+          d="M50 120 C42 127 58 133 50 141"
+          fill="none"
+          stroke="#475569"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <circle cx="50" cy="68" r="46" fill={`url(#${gradientId})`} />
+        <rect x="38" y="14" width="24" height="14" rx="3" fill="#334155" />
+        <path
+          d="M50 16 C50 6 62 8 64 -2"
+          transform="translate(0 6)"
+          fill="none"
+          stroke="#a16207"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+        />
+        <g className="bomb-spark">
+          <polygon
+            points="64,-8 67,2 77,0 70,7 75,15 65,11 58,18 60,8 52,3 62,3"
+            transform="translate(0 6)"
+            fill="#fbbf24"
+            stroke="#ef4444"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </g>
+        <ellipse
+          cx="30"
+          cy="50"
+          rx="8"
+          ry="15"
+          fill="#fff"
+          opacity="0.28"
+          transform="rotate(-25 30 50)"
+        />
+        <path d="M50 114 L42 122 L58 122 Z" fill={palette.dark} />
+        <circle cx="50" cy="70" r="15" fill="#ef4444" />
+        <path
+          d="M44 64 L56 76 M56 64 L44 76"
+          stroke="#fff"
+          strokeWidth="4.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+
   return (
     <svg
       viewBox="0 0 100 142"
