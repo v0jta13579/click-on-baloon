@@ -10,7 +10,7 @@ const fredoka = Fredoka({
 export const metadata: Metadata = {
   title: "Balónky – hra na praskání balónků",
   description:
-    "Praskej barevné balónky, plň úkoly v levelech, chytej bronzové, stříbrné a zlaté bonusy a překonej svůj rekord.",
+    "Praskej barevné balónky, vyhýbej se bombám, plň úkoly, získávej XP a levely jako v battle passu a překonej svůj rekord.",
 }
 
 export const viewport: Viewport = {

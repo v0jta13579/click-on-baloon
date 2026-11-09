@@ -70,7 +70,62 @@ body {
   animation: pop-label 0.9s ease-out forwards;
 }
 
+[data-paused="true"] .balloon-body,
+[data-paused="true"] .balloon-sway {
+  animation-play-state: paused;
+  pointer-events: none;
+}
+
+@keyframes hurt-flash {
+  from {
+    box-shadow: inset 0 0 140px 40px rgba(220, 38, 38, 0.75);
+    background: rgba(239, 68, 68, 0.25);
+  }
+  to {
+    box-shadow: inset 0 0 140px 40px rgba(220, 38, 38, 0);
+    background: rgba(239, 68, 68, 0);
+  }
+}
+
+.hurt-flash {
+  pointer-events: none;
+  animation: hurt-flash 0.6s ease-out forwards;
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast-in {
+  animation: toast-in 0.25s ease-out;
+}
+
+@keyframes bomb-spark {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.bomb-spark {
+  animation: bomb-spark 0.35s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .bomb-spark,
+  .hurt-flash {
+    animation: none;
+  }
   .balloon-sway {
     animation: none;
   }

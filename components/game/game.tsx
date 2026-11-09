@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react"
-import { PartyPopper } from "lucide-react"
-import { getLevel, MAX_LEVEL, type BalloonKind } from "@/lib/game/levels"
+import { Sparkles, Trophy } from "lucide-react"
+import { getDifficulty, type BalloonKind } from "@/lib/game/levels"
 import { updateSave, useSave } from "@/lib/game/save"
 import {
   createState,
@@ -10,21 +10,48 @@ import {
   pickBalloonKind,
   reducer,
   type Balloon,
+  type Notice,
 } from "@/lib/game/state"
 import { BalloonSprite } from "./balloon-sprite"
 import { Hud } from "./hud"
-import { LevelSidebar } from "./level-sidebar"
 import { PopBurst } from "./pop-burst"
+import { StartOverlay } from "./start-overlay"
+
+function Toast({ notice, onDone }: { notice: Notice; onDone: (id: number) => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => onDone(notice.id), 3500)
+    return () => clearTimeout(timer)
+  }, [notice.id, onDone])
+
+  const level = notice.tone === "level"
+
+  return (
+    <div
+      className={`toast-in flex items-center gap-2 rounded-2xl px-4 py-2.5 text-base font-bold shadow-xl ${
+        level ? "bg-violet-600 text-white" : "bg-white text-slate-800"
+      }`}
+    >
+      {level ? (
+        <Trophy className="size-5 shrink-0 text-amber-300" aria-hidden="true" />
+      ) : (
+        <Sparkles className="size-5 shrink-0 text-violet-600" aria-hidden="true" />
+      )}
+      {notice.text}
+    </div>
+  )
+}
 
 export function Game() {
-  const [state, dispatch] = useReducer(reducer, 1, (level) => createState(level))
+  const [state, dispatch] = useReducer(reducer, undefined, () => createState("menu"))
   const save = useSave()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [tabHidden, setTabHidden] = useState(false)
 
   const fieldRef = useRef<HTMLDivElement>(null)
   const stateRef = useRef(state)
   const nextId = useRef(1)
   const lastKind = useRef<BalloonKind | null>(null)
+  const [recordAtStart, setRecordAtStart] = useState(0)
 
   useEffect(() => {
     stateRef.current = state
@@ -32,23 +59,25 @@ export function Game() {
 
   useEffect(() => {
     if (state.score > save.best) updateSave({ best: state.score })
-  }, [state.score, save.best])
+    if (state.level > save.bestLevel) updateSave({ bestLevel: state.level })
+  }, [state.score, state.level, save.best, save.bestLevel])
 
   useEffect(() => {
-    if (state.status === "complete" && state.level < MAX_LEVEL && state.level + 1 > save.unlocked) {
-      updateSave({ unlocked: state.level + 1 })
-    }
-  }, [state.status, state.level, save.unlocked])
+    const onVisibility = () => setTabHidden(document.hidden)
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => document.removeEventListener("visibilitychange", onVisibility)
+  }, [])
+
+  const paused = menuOpen || tabHidden
+  const playing = state.status === "playing"
 
   useEffect(() => {
-    if (state.status !== "playing") return
-
-    const def = getLevel(state.level)
+    if (!playing || paused) return
 
     const spawn = () => {
-      if (document.hidden) return
-      const { level, stats } = stateRef.current
-      const kind = pickBalloonKind(lastKind.current, pendingColors(level, stats))
+      const { level, done } = stateRef.current
+      const def = getDifficulty(level)
+      const kind = pickBalloonKind(lastKind.current, level, pendingColors(level, done))
       lastKind.current = kind
 
       const balloon: Balloon = {
@@ -64,9 +93,16 @@ export function Game() {
     }
 
     spawn()
-    const interval = setInterval(spawn, def.spawnMs)
+    const interval = setInterval(spawn, getDifficulty(state.level).spawnMs)
     return () => clearInterval(interval)
-  }, [state.status, state.level])
+  }, [playing, paused, state.level])
+
+  const handlePlay = useCallback(() => {
+    setRecordAtStart(save.best)
+    lastKind.current = null
+    setMenuOpen(false)
+    dispatch({ type: "start" })
+  }, [save.best])
 
   const handlePop = useCallback((balloon: Balloon, clientX: number, clientY: number) => {
     const rect = fieldRef.current?.getBoundingClientRect()
@@ -81,36 +117,21 @@ export function Game() {
 
   const handleEscape = useCallback((id: number) => dispatch({ type: "escape", id }), [])
   const handleEffectDone = useCallback((id: number) => dispatch({ type: "effectDone", id }), [])
-
-  const lastLevel = state.level >= MAX_LEVEL
+  const handleNoticeDone = useCallback((id: number) => dispatch({ type: "noticeDone", id }), [])
 
   return (
-    <main className="flex h-dvh w-full overflow-hidden bg-sky-200">
-      <LevelSidebar
-        currentLevel={state.level}
-        unlocked={save.unlocked}
-        stats={state.stats}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onSelect={(level) => dispatch({ type: "selectLevel", level })}
-        onNewGame={() => dispatch({ type: "newGame" })}
-      />
-
+    <main className="h-dvh w-full overflow-hidden bg-sky-200">
       <div
         ref={fieldRef}
         onPointerDown={() => dispatch({ type: "miss" })}
-        className="sky-field relative flex-1 touch-none select-none overflow-hidden"
+        data-paused={paused}
+        className="sky-field relative h-full touch-none select-none overflow-hidden"
       >
-        <h1 className="sr-only">Balónky – praskej balónky a plň úkoly</h1>
+        <h1 className="sr-only">Balónky – praskej balónky, plň úkoly a získávej levely</h1>
 
-        <Hud
-          level={state.level}
-          score={state.score}
-          best={save.best}
-          streak={state.stats.streak}
-          doubleUntil={state.doubleUntil}
-          onOpenLevels={() => setSidebarOpen(true)}
-        />
+        {state.hurt > 0 && (
+          <div key={state.hurt} aria-hidden="true" className="hurt-flash absolute inset-0 z-20" />
+        )}
 
         {state.balloons.map((balloon) => (
           <BalloonSprite
@@ -125,47 +146,49 @@ export function Game() {
           <PopBurst key={effect.id} effect={effect} onDone={handleEffectDone} />
         ))}
 
-        {state.status === "complete" && (
-          <div className="absolute inset-0 z-30 grid place-items-center bg-slate-900/30 p-4">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="level-complete-title"
-              onPointerDown={(event) => event.stopPropagation()}
-              className="w-full max-w-sm rounded-3xl bg-white p-8 text-center shadow-2xl"
-            >
-              <PartyPopper className="mx-auto size-12 text-amber-500" aria-hidden="true" />
-              <h2 id="level-complete-title" className="mt-3 text-3xl font-bold text-slate-800">
-                {lastLevel ? "Vyhrál jsi!" : `Level ${state.level} splněn!`}
-              </h2>
-              <p className="mt-2 text-lg text-slate-600">
-                Máš <strong>{state.score}</strong> kliků.
-                {lastLevel
-                  ? " Splnil jsi všechny levely."
-                  : ` Level ${state.level + 1} bude těžší.`}
-              </p>
-              <div className="mt-6 flex flex-col gap-2">
-                {!lastLevel && (
-                  <button
-                    type="button"
-                    autoFocus
-                    onClick={() => dispatch({ type: "selectLevel", level: state.level + 1 })}
-                    className="rounded-2xl bg-sky-600 px-6 py-3 text-lg font-bold text-white hover:bg-sky-700"
-                  >
-                    Další level
-                  </button>
-                )}
-                <button
-                  type="button"
-                  autoFocus={lastLevel}
-                  onClick={() => dispatch({ type: "selectLevel", level: state.level })}
-                  className="rounded-2xl bg-slate-100 px-6 py-3 text-lg font-semibold text-slate-700 hover:bg-slate-200"
-                >
-                  Hrát tento level znovu
-                </button>
-              </div>
-            </div>
-          </div>
+        {menuOpen && (
+          <button
+            type="button"
+            aria-label="Zavřít levely a pokračovat ve hře"
+            onClick={() => setMenuOpen(false)}
+            className="absolute inset-0 z-20 cursor-default bg-slate-900/30"
+          />
+        )}
+
+        <Hud
+          level={state.level}
+          xp={state.xp}
+          lives={state.lives}
+          score={state.score}
+          best={save.best}
+          streak={state.streak}
+          doubleUntil={state.doubleUntil}
+          progress={state.progress}
+          done={state.done}
+          menuOpen={menuOpen}
+          onToggleMenu={() => setMenuOpen((open) => !open)}
+        />
+
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex flex-col items-center gap-2 px-3"
+        >
+          {state.notices.map((notice) => (
+            <Toast key={notice.id} notice={notice} onDone={handleNoticeDone} />
+          ))}
+        </div>
+
+        {state.status !== "playing" && (
+          <StartOverlay
+            mode={state.status}
+            score={state.score}
+            level={state.level}
+            best={save.best}
+            bestLevel={save.bestLevel}
+            newRecord={state.status === "over" && state.score > 0 && state.score > recordAtStart}
+            onPlay={handlePlay}
+          />
         )}
       </div>
     </main>

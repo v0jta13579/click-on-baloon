@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Flame, Menu, MousePointerClick, Trophy, Zap } from "lucide-react"
+import { Flame, Heart, MousePointerClick, Trophy, Zap } from "lucide-react"
+import { MAX_LIVES } from "@/lib/game/levels"
+import { LevelMenu } from "./level-menu"
 
 function DoubleBadge({ until }: { until: number }) {
   const [now, setNow] = useState(0)
@@ -53,29 +55,64 @@ function Stat({
   )
 }
 
+function Lives({ lives }: { lives: number }) {
+  return (
+    <div
+      role="img"
+      aria-label={`Životy: ${lives} ze ${MAX_LIVES}`}
+      className="flex items-center gap-1 rounded-2xl bg-white/90 px-3 py-3 shadow-lg"
+    >
+      {Array.from({ length: MAX_LIVES }, (_, i) => (
+        <Heart
+          key={i}
+          aria-hidden="true"
+          className={`size-6 ${
+            i < lives ? "fill-red-500 text-red-500" : "fill-transparent text-slate-300"
+          }`}
+        />
+      ))}
+    </div>
+  )
+}
+
 type Props = {
   level: number
+  xp: number
+  lives: number
   score: number
   best: number
   streak: number
   doubleUntil: number
-  onOpenLevels: () => void
+  progress: Record<string, number>
+  done: Record<string, boolean>
+  menuOpen: boolean
+  onToggleMenu: () => void
 }
 
-export function Hud({ level, score, best, streak, doubleUntil, onOpenLevels }: Props) {
+export function Hud({
+  level,
+  xp,
+  lives,
+  score,
+  best,
+  streak,
+  doubleUntil,
+  progress,
+  done,
+  menuOpen,
+  onToggleMenu,
+}: Props) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-wrap items-center gap-2 p-3 sm:gap-3 sm:p-4">
-      <button
-        type="button"
-        onClick={onOpenLevels}
-        className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-white/90 px-3 py-2 text-base font-bold text-slate-800 shadow-lg md:hidden"
-      >
-        <Menu className="size-5" aria-hidden="true" />
-        Level {level}
-      </button>
-      <div className="hidden rounded-2xl bg-sky-600 px-4 py-2 text-xl font-bold text-white shadow-lg md:block">
-        Level {level}
-      </div>
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-wrap items-start gap-2 p-3 sm:gap-3 sm:p-4">
+      <LevelMenu
+        level={level}
+        xp={xp}
+        progress={progress}
+        done={done}
+        open={menuOpen}
+        onToggle={onToggleMenu}
+      />
+      <Lives lives={lives} />
       <Stat
         icon={<MousePointerClick className="size-6 text-sky-600" aria-hidden="true" />}
         label="Kliky"
